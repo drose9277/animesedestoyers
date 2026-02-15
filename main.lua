@@ -1,86 +1,67 @@
--- 防止重复运行
-if getgenv().KyusukeExecuted then return end
-getgenv().KyusukeExecuted = true
+-- [[ Kyusuke Hub V5 - 稳定版 ]]
 
-local VIM = game:GetService("VirtualInputManager")
+-- 1. 彻底清理旧变量
+getgenv().AutoClickRunning = false
+
 local UIS = game:GetService("UserInputService")
+local VIM = game:GetService("VirtualInputManager")
 local CoreGui = game:GetService("CoreGui")
 
--- 状态设置
-getgenv().Running = false
-getgenv().Delay = 0.1
+-- 2. 检查并清理旧 UI
+if CoreGui:FindFirstChild("KyusukeUI") then
+    CoreGui.KyusukeUI:Destroy()
+end
 
--- [[ 创建极简控制台 ]]
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KyusukeV4"
-ScreenGui.Parent = CoreGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- 3. 创建原生 UI (不依赖任何外部链接)
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "KyusukeUI"
 
-local Main = Instance.new("Frame")
-Main.Name = "Main"
-Main.Parent = ScreenGui
-Main.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Main.BackgroundTransparency = 0.4
-Main.BorderSizePixel = 0
-Main.Position = UDim2.new(0.5, -60, 0, 10) -- 屏幕顶部正中央
-Main.Size = UDim2.new(0, 120, 0, 80)
-Main.Active = true
-Main.Draggable = true -- 允许你手动拖走
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 150, 0, 100)
+Main.Position = UDim2.new(0.5, -75, 0.1, 0) -- 放在屏幕顶部，远离中心
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Main.BorderSizePixel = 2
 
-local Toggle = Instance.new("TextButton")
-Toggle.Name = "Toggle"
-Toggle.Parent = Main
-Toggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-Toggle.Size = UDim2.new(1, 0, 0.6, 0)
-Toggle.Font = Enum.Font.SourceSansBold
-Toggle.Text = "START"
-Toggle.TextColor3 = Color3.new(1, 1, 1)
-Toggle.TextSize = 24
+local Button = Instance.new("TextButton", Main)
+Button.Size = UDim2.new(1, 0, 1, 0)
+Button.Text = "START"
+Button.TextColor3 = Color3.new(1, 1, 1)
+Button.TextSize = 25
+Button.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
 
-local Info = Instance.new("TextLabel")
-Info.Name = "Info"
-Info.Parent = Main
-Info.Position = UDim2.new(0, 0, 0.6, 0)
-Info.Size = UDim2.new(1, 0, 0.4, 0)
-Info.BackgroundTransparency = 1
-Info.Text = "Speed: 0.1s (X Stop)"
-Info.TextColor3 = Color3.new(1, 1, 1)
-Info.TextSize = 14
-
--- [[ 核心逻辑 ]]
-
-Toggle.MouseButton1Click:Connect(function()
-    getgenv().Running = not getgenv().Running
-    if getgenv().Running then
-        Toggle.Text = "STOPPING..."
-        Toggle.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-    else
-        Toggle.Text = "START"
-        Toggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    end
-end)
-
--- 快捷键停止
-UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.X then
-        getgenv().Running = false
-        Toggle.Text = "START"
-        Toggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    end
-end)
-
--- 连点循环 (使用最底层的 Spawn)
-spawn(function()
+-- 4. 核心连点逻辑 (改用 task.spawn 避开 nil 报错)
+task.spawn(function()
     while true do
-        if getgenv().Running then
-            -- 坐标 (-100, -100) 如果无效，请尝试改回 (500, 500)
-            VIM:SendMouseButtonEvent(-100, -100, 0, true, game, 0)
-            VIM:SendMouseButtonEvent(-100, -100, 0, false, game, 0)
-            task.wait(getgenv().Delay)
+        if getgenv().AutoClickRunning then
+            -- 坐标设在屏幕外 (-500) 彻底解决 UI 跟着动的问题
+            VIM:SendMouseButtonEvent(-500, -500, 0, true, game, 0)
+            VIM:SendMouseButtonEvent(-500, -500, 0, false, game, 0)
+            task.wait(0.1) -- 建议不要太快，0.1s 很稳
         else
             task.wait(0.5)
         end
     end
 end)
 
-print("Kyusuke Hub V4 已注入")
+-- 5. 交互逻辑
+Button.MouseButton1Click:Connect(function()
+    getgenv().AutoClickRunning = not getgenv().AutoClickRunning
+    if getgenv().AutoClickRunning then
+        Button.Text = "STOP"
+        Button.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+    else
+        Button.Text = "START"
+        Button.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    end
+end)
+
+-- PC 快捷键 X 停止
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.X then
+        getgenv().AutoClickRunning = false
+        Button.Text = "START"
+        Button.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    end
+end)
+
+print("Kyusuke Hub V5 加载成功，已解决 nil 报错")
