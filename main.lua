@@ -1,70 +1,67 @@
 --[[
-    Kyusuke Hub - Shipping Lanes Edition (Fixed Clicker)
-    Optimized for: Compatibility & Speed (0.05s)
+    Kyusuke Hub - Anime Clicker Edition
+    Fixed UI Error & New Click Method
 ]]
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- 修复某些执行器加载 Rayfield 时 Padding 报错的问题
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Kyusuke Hub | Shipping Lanes",
-   LoadingTitle = "Fixing Clicker Input...",
+   Name = "Kyusuke Hub",
+   LoadingTitle = "Kyusuke Hub Loading...",
    LoadingSubtitle = "by Kyusuke",
    ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "KyusukeHubConfig",
-      FileName = "MainConfig"
+      Enabled = false -- 关闭配置保存以减少报错可能
    }
 })
 
 -- Variables
 getgenv().autoClick = false
 getgenv().clickSpeed = 0.05
-local vim = game:GetService("VirtualInputManager")
 
 local MainTab = Window:CreateTab("Main Hacks", 4483362458)
 
--- New Clicking Logic using VirtualInputManager
+-- 核心点击逻辑：使用 RemoteEvent (最强最快)
 local function startClicking()
     task.spawn(function()
+        -- 尝试自动寻找游戏里的点击事件 (适用于大多数点击游戏)
+        local clickEvent = game:GetService("ReplicatedStorage"):FindFirstChild("Click", true) or 
+                           game:GetService("ReplicatedStorage"):FindFirstChild("ClickEvent", true) or
+                           game:GetService("ReplicatedStorage"):FindFirstChild("TappingEvent", true)
+
         while getgenv().autoClick do
-            -- 获取屏幕中心位置进行点击
-            local viewportSize = workspace.CurrentCamera.ViewportSize
-            local x = viewportSize.X / 2
-            local y = viewportSize.Y / 2
-            
-            -- 模拟鼠标左键按下与弹起
-            vim:SendMouseButtonEvent(x, y, 0, true, game, 0)
-            task.wait(0.01) -- 极短的按下延迟确保游戏识别
-            vim:SendMouseButtonEvent(x, y, 0, false, game, 0)
-            
+            if clickEvent and clickEvent:IsA("RemoteEvent") then
+                clickEvent:FireServer() -- 直接发送点击指令给服务器
+            else
+                -- 如果找不到事件，则退回使用模拟点击，但这次点击按钮的坐标
+                game:GetService("VirtualInputManager"):SendMouseButtonEvent(500, 500, 0, true, game, 0)
+                game:GetService("VirtualInputManager"):SendMouseButtonEvent(500, 500, 0, false, game, 0)
+            end
             task.wait(getgenv().clickSpeed)
         end
     end)
 end
 
--- UI Toggle
+-- UI Elements
 MainTab:CreateToggle({
-   Name = "Enable Auto-Click (Fixed)",
+   Name = "Auto Clicker (Remote/VIM)",
    CurrentValue = false,
-   Flag = "AutoClickToggle",
+   Flag = "Toggle1",
    Callback = function(Value)
       getgenv().autoClick = Value
       if Value then
-          Rayfield:Notify({Title = "Auto-Click Active", Content = "Using VirtualInputManager", Duration = 2})
           startClicking()
       end
    end,
 })
 
--- Slider
 MainTab:CreateSlider({
-   Name = "Click Delay",
-   Info = "Default 0.05s",
-   Range = {0.01, 1},
+   Name = "Click Speed",
+   Range = {0.01, 0.5},
    Increment = 0.01,
    Suffix = "s",
    CurrentValue = 0.05,
-   Flag = "SpeedSlider",
+   Flag = "Slider1",
    Callback = function(Value)
       getgenv().clickSpeed = Value
    end,
@@ -72,19 +69,18 @@ MainTab:CreateSlider({
 
 MainTab:CreateSection("Emergency Controls")
 
--- Force Stop
 MainTab:CreateButton({
-   Name = "FORCE STOP & CLOSE UI",
+   Name = "FORCE STOP",
    Callback = function()
       getgenv().autoClick = false
-      task.wait(0.1)
       Rayfield:Destroy()
-      error("Kyusuke Hub: Force Closed")
    end,
 })
 
-Rayfield:Notify({
-   Title = "Kyusuke Hub Ready",
-   Content = "If it still fails, try re-equipping your tool.",
-   Duration = 5,
-})
+-- 简单的防挂机
+local vu = game:GetService("VirtualUser")
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+   vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+   task.wait(1)
+   vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+end)
