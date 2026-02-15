@@ -62,6 +62,13 @@ task.spawn(function()
     end
 end)
 
+game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.X then
+        _G.AutoClickerRunning = false
+        Rayfield:Notify({Title = "紧急停止", Content = "已通过快捷键 X 关闭点击", Duration = 2})
+    end
+end)
+
 Rayfield:Notify({
    Title = "脚本注入成功",
    Content = "如果点击太快导致无法操作，请尝试调高延迟",
