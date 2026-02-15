@@ -7,7 +7,7 @@ getgenv().ClickSpeed = 0.1
 
 -- [[ 1. 创建 UI 窗口 ]]
 local Window = Rayfield:CreateWindow({
-   Name = "🌐 虚空连点器 (防卡死版)",
+   Name = "KyusukeHub",
    LoadingTitle = "正在配置屏幕外点击...",
    ConfigurationSaving = { Enabled = false }
 })
