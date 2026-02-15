@@ -1,101 +1,91 @@
--- [[ 1. 加载 UI 库 ]]
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- [[ 1. 加载 Orion UI 库 ]]
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 local VIM = game:GetService("VirtualInputManager")
 local UIS = game:GetService("UserInputService")
 
--- [[ 2. 状态初始化 ]]
-getgenv().KyusukeConfig = {
-    AutoClick = false,
-    Speed = 0.1,
-    SafeMode = true
-}
+-- [[ 2. 初始化变量 ]]
+getgenv().AutoClick = false
+getgenv().ClickSpeed = 0.1
 
--- [[ 3. 创建 UI 窗口 - 加入锁定参数 ]]
-local Window = Rayfield:CreateWindow({
-   Name = "🔥 Kyusuke Hub",
-   LoadingTitle = "正在启动系统...",
-   LoadingSubtitle = "by Gemini",
-   ConfigurationSaving = { Enabled = false },
-   -- 关键修复点：如果库版本支持，尝试通过特定参数减少交互冲突
-   Discord = {
-      Enabled = false,
-      Invite = "",
-      RememberJoins = true
-   },
-   KeySystem = false
+-- [[ 3. 创建窗口 ]]
+local Window = OrionLib:MakeWindow({
+    Name = "🔥 Kyusuke Hub", 
+    HidePremium = true, 
+    SaveConfig = false, 
+    IntroText = "Kyusuke 系统启动中..."
 })
 
--- 💡 修复“UI 跟着动”的小技巧：
--- 实际上是因为 VIM 的坐标点正好落在了 UI 窗口上。
--- 我们把点击坐标设得更远一点，彻底离开 UI 可能存在的区域。
-
-local MainTab = Window:CreateTab("自动功能", 4483362458)
-
--- [[ 4. 手机紧急停止按钮 ]]
+-- [[ 4. 手机专用紧急停止（防止 UI 卡死） ]]
 local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
 local StopButton = Instance.new("TextButton", ScreenGui)
 StopButton.Size = UDim2.new(0, 100, 0, 45)
-StopButton.Position = UDim2.new(0.5, -50, 0.05, 0)
-StopButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-StopButton.Text = "停止点击"
+StopButton.Position = UDim2.new(0.5, -50, 0, 10)
+StopButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+StopButton.Text = "🛑 停止"
+StopButton.TextColor3 = Color3.new(1, 1, 1)
 StopButton.Visible = false
-StopButton.ZIndex = 10000
+StopButton.ZIndex = 999
 
 StopButton.MouseButton1Click:Connect(function()
-    getgenv().KyusukeConfig.AutoClick = false
+    getgenv().AutoClick = false
     StopButton.Visible = false
+    OrionLib:MakeNotification({
+        Name = "已停止",
+        Content = "连点器已关闭",
+        Time = 2
+    })
 end)
 
--- [[ 5. 功能组件 ]]
-MainTab:CreateToggle({
-   Name = "开启自动点击",
-   CurrentValue = false,
-   Flag = "AutoClickToggle",
-   Callback = function(Value)
-      getgenv().KyusukeConfig.AutoClick = Value
-      StopButton.Visible = Value
-   end,
+-- [[ 5. 主菜单 ]]
+local Tab = Window:MakeTab({
+    Name = "自动功能",
+    Icon = "rbxassetid://4483362458",
+    PremiumOnly = false
 })
 
-MainTab:CreateSlider({
-   Name = "点击间隔 (秒)",
-   Range = {0.01, 1},
-   Increment = 0.01,
-   CurrentValue = 0.1,
-   Callback = function(Value)
-      getgenv().KyusukeConfig.Speed = Value
-   end,
+Tab:AddToggle({
+    Name = "开启自动点击",
+    Default = false,
+    Callback = function(Value)
+        getgenv().AutoClick = Value
+        StopButton.Visible = Value -- 开启时显示红色按钮
+    end    
 })
 
--- [[ 6. 核心逻辑 - 优化坐标防止拖拽 UI ]]
+Tab:AddSlider({
+    Name = "点击延迟 (秒)",
+    Min = 0.01,
+    Max = 1,
+    Default = 0.1,
+    Color = Color3.fromRGB(255,255,255),
+    Increment = 0.01,
+    ValueName = "sec",
+    Callback = function(Value)
+        getgenv().ClickSpeed = Value
+    end    
+})
+
+-- [[ 6. 核心逻辑：强制分离点击点 ]]
 task.spawn(function()
     while true do
-        if getgenv().KyusukeConfig.AutoClick then
-            -- 既然 UI 会被带动，说明坐标 (-100, -100) 在某些分辨率下还是被判定在了 UI 范围内
-            -- 我们直接把坐标设为极其夸张的负数，彻底远离 UI 渲染层
-            local targetX, targetY = -5000, -5000 
-            
-            -- 如果关闭安全模式，则点屏幕中心（由于坐标在中心，UI 窗口通常在边缘，可以减少拖拽概率）
-            if not getgenv().KyusukeConfig.SafeMode then
-                targetX, targetY = 500, 500
-            end
-
-            VIM:SendMouseButtonEvent(targetX, targetY, 0, true, game, 0)
-            VIM:SendMouseButtonEvent(targetX, targetY, 0, false, game, 0)
-            
-            task.wait(getgenv().KyusukeConfig.Speed)
+        if getgenv().AutoClick then
+            -- 坐标设为 -5000, -5000。
+            -- 如果 UI 还会动，尝试改为屏幕中心 (500, 500) 看看是否有差异
+            VIM:SendMouseButtonEvent(-5000, -5000, 0, true, game, 0)
+            VIM:SendMouseButtonEvent(-5000, -5000, 0, false, game, 0)
+            task.wait(getgenv().ClickSpeed)
         else
-            task.wait(0.3)
+            task.wait(0.5)
         end
     end
 end)
 
--- 快捷键 X 停止
+-- [[ 7. PC 快捷键 ]]
 UIS.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.X then
-        getgenv().KyusukeConfig.AutoClick = false
+        getgenv().AutoClick = false
         StopButton.Visible = false
     end
 end)
 
-Rayfield:Notify({Title = "Kyusuke Hub", Content = "已修复 UI 跟着鼠标动的问题", Duration = 3})
+OrionLib:Init()
