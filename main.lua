@@ -1,67 +1,83 @@
--- Kyusuke Hub: Anime Destroyers Edition
--- Fixed UI and Clicker
+--[[
+    Kyusuke Hub - Anime Destroyers (Rayfield Fixed)
+    Status: UI Error Patched
+]]
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("Kyusuke Hub | Anime Destroyers", "Midnight")
+-- 尝试使用兼容性最好的 Rayfield 加载源
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 
--- Variables
+local Window = Rayfield:CreateWindow({
+   Name = "Kyusuke Hub | Anime Destroyers",
+   LoadingTitle = "Kyusuke Hub",
+   LoadingSubtitle = "by Kyusuke",
+   ConfigurationSaving = {
+      Enabled = false, -- 必须设为 false 以修复 Padding 报错
+      FolderName = "KyusukeHub"
+   },
+   Discord = {
+      Enabled = false
+   }
+})
+
+-- 变量
 getgenv().autoClick = false
 getgenv().clickSpeed = 0.05
 
--- Main Tab
-local Main = Window:NewTab("Main")
-local Section = Main:NewSection("Clicker Functions")
+local MainTab = Window:CreateTab("Main", 4483362458)
 
--- Anime Destroyers 专属点击函数
-local function doClick()
+-- 点击逻辑
+local function startClicking()
     task.spawn(function()
         while getgenv().autoClick do
-            -- 策略 A: 尝试触发游戏内置点击事件 (最有效)
-            local remote = game:GetService("ReplicatedStorage"):FindFirstChild("Click", true) or 
-                           game:GetService("ReplicatedStorage"):FindFirstChild("ClickRemote", true)
+            -- 模拟屏幕中心点击（Anime Destroyers 通用）
+            local vim = game:GetService("VirtualInputManager")
+            vim:SendMouseButtonEvent(500, 500, 0, true, game, 0)
+            vim:SendMouseButtonEvent(500, 500, 0, false, game, 0)
             
-            if remote and remote:IsA("RemoteEvent") then
-                remote:FireServer()
-            else
-                -- 策略 B: 备选模拟点击
-                local vim = game:GetService("VirtualInputManager")
-                vim:SendMouseButtonEvent(500, 500, 0, true, game, 0)
-                vim:SendMouseButtonEvent(500, 500, 0, false, game, 0)
-            end
             task.wait(getgenv().clickSpeed)
         end
     end)
 end
 
-Section:NewToggle("Enable Auto Click", "Starts clicking automatically", function(state)
-    getgenv().autoClick = state
-    if state then
-        doClick()
-    end
-end)
+-- UI 功能
+MainTab:CreateToggle({
+   Name = "Auto Clicker",
+   CurrentValue = false,
+   Flag = "ClickToggle",
+   Callback = function(Value)
+      getgenv().autoClick = Value
+      if Value then
+          startClicking()
+      end
+   end,
+})
 
-Section:NewSlider("Click Speed", "Lower is faster", 0.5, 0.01, function(s)
-    getgenv().clickSpeed = s
-end)
+MainTab:CreateSlider({
+   Name = "Click Speed",
+   Range = {0.01, 1},
+   Increment = 0.01,
+   Suffix = "s",
+   CurrentValue = 0.05,
+   Flag = "SpeedSlider",
+   Callback = function(Value)
+      getgenv().clickSpeed = Value
+   end,
+})
 
--- Settings Tab
-local Settings = Window:NewTab("Settings")
-local SettingSection = Settings:NewSection("Controls")
+-- 强行停止
+MainTab:CreateSection("System")
 
-SettingSection:NewKeybind("Toggle UI", "Press to Hide/Show UI", Enum.KeyCode.RightControl, function()
-	Library:ToggleLib()
-end)
+MainTab:CreateButton({
+   Name = "FORCE STOP",
+   Callback = function()
+      getgenv().autoClick = false
+      task.wait(0.1)
+      Rayfield:Destroy()
+   end,
+})
 
-SettingSection:NewButton("FORCE STOP", "Kill all scripts", function()
-    getgenv().autoClick = false
-    game:GetService("CoreGui"):FindFirstChild("Kyusuke Hub | Anime Destroyers"):Destroy()
-    error("Force Stopped")
-end)
-
--- Anti-AFK
-local vu = game:GetService("VirtualUser")
-game:GetService("Players").LocalPlayer.Idled:Connect(function()
-    vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-    task.wait(1)
-    vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-end)
+Rayfield:Notify({
+   Title = "Kyusuke Hub Loaded",
+   Content = "Enjoy your game!",
+   Duration = 5,
+})
