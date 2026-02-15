@@ -1,5 +1,5 @@
 --[[
-    Script: Kyusuke Hub (v3.2 Final Fixed)
+    Script: Kyusuke Hub (v3.2 Final Fixed）
     Fix: Resolved 'attempt to call a nil value' error
 ]]
 
