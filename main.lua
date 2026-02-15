@@ -1,6 +1,6 @@
 --[[
-    Kyusuke Hub - Universal Auto Clicker
-    UI Library: Rayfield
+    Kyusuke Hub - Shipping Lanes Edition
+    Updated: Click Speed 0.05s
 ]]
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -16,50 +16,52 @@ local Window = Rayfield:CreateWindow({
    }
 })
 
--- Global Variables
+-- 全局变量设置
 getgenv().autoClick = false
-getgenv().clickSpeed = 0.01 -- Extremely fast
+getgenv().clickSpeed = 0.05 -- 按照要求修改为 0.05s
 
 local MainTab = Window:CreateTab("Main Hacks", 4483362458)
 
--- Auto Click Logic using VirtualUser (Higher speed)
-local vu = game:GetService("VirtualUser")
-game:GetService("Players").LocalPlayer.Idled:Connect(function()
-    vu:CaptureController()
-    vu:ClickButton2(Vector2.new())
-end)
-
+-- 自动点击逻辑
 local function startClicking()
     task.spawn(function()
+        local vu = game:GetService("VirtualUser")
         while getgenv().autoClick do
-            -- Fast Click Execution
+            -- 模拟点击
             vu:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
             task.wait(getgenv().clickSpeed)
             vu:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            
+            -- 额外的安全等待，确保不会因为频率太高导致脚本卡死
+            if not getgenv().autoClick then break end
         end
     end)
 end
 
--- UI Elements
+-- UI 控件
 MainTab:CreateToggle({
-   Name = "Enable Fast Auto-Click",
+   Name = "Enable Auto-Click (0.05s)",
    CurrentValue = false,
    Flag = "AutoClickToggle",
    Callback = function(Value)
       getgenv().autoClick = Value
       if Value then
+          Rayfield:Notify({Title = "Auto-Click On", Content = "Speed set to 0.05s", Duration = 2})
           startClicking()
+      else
+          Rayfield:Notify({Title = "Auto-Click Off", Content = "Stopped clicking", Duration = 2})
       end
    end,
 })
 
+-- 速度调节滑块 (默认设为 0.05)
 MainTab:CreateSlider({
-   Name = "Click Delay (Seconds)",
-   Info = "Lower = Faster",
-   Range = {0.001, 0.5},
-   Increment = 0.005,
+   Name = "Adjust Click Speed",
+   Info = "Default is 0.05s",
+   Range = {0.01, 1},
+   Increment = 0.01,
    Suffix = "s",
-   CurrentValue = 0.01,
+   CurrentValue = 0.05,
    Flag = "SpeedSlider",
    Callback = function(Value)
       getgenv().clickSpeed = Value
@@ -68,19 +70,28 @@ MainTab:CreateSlider({
 
 MainTab:CreateSection("Emergency Controls")
 
+-- 强行停止按钮
 MainTab:CreateButton({
-   Name = "FORCE STOP (Kill Script)",
+   Name = "FORCE STOP & CLOSE UI",
    Callback = function()
       getgenv().autoClick = false
+      Rayfield:Notify({Title = "Emergency", Content = "Script Terminated!", Duration = 2})
+      task.wait(0.2)
       Rayfield:Destroy()
-      -- Kill any remaining loops
-      error("Script Forcefully Stopped by User")
+      -- 强制终止所有当前脚本线程
+      error("Kyusuke Hub: Manual termination")
    end,
 })
 
+-- 防挂机功能
+local Players = game:GetService("Players")
+Players.LocalPlayer.Idled:Connect(function()
+    game:GetService("VirtualUser"):CaptureController()
+    game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+end)
+
 Rayfield:Notify({
    Title = "Kyusuke Hub Loaded",
-   Content = "Ready to dominate Shipping Lanes!",
+   Content = "Click speed is set to 0.05s",
    Duration = 5,
-   Image = 4483362458,
 })
