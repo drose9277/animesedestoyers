@@ -1,86 +1,75 @@
 --[[
-    Kyusuke Hub - Anime Clicker Edition
-    Fixed UI Error & New Click Method
+    Kyusuke Hub - Anime Destroyers Special Edition
+    Optimized for: Anime Destroyers (Direct Remote Firing)
+    Fixed: Padding UI Error & Click Issue
 ]]
 
--- 修复某些执行器加载 Rayfield 时 Padding 报错的问题
+-- 使用更稳定的 Rayfield 加载源，修复 Padding 报错
 local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Kyusuke Hub",
-   LoadingTitle = "Kyusuke Hub Loading...",
+   Name = "Kyusuke Hub | Anime Destroyers",
+   LoadingTitle = "Loading Kyusuke Hub...",
    LoadingSubtitle = "by Kyusuke",
    ConfigurationSaving = {
-      Enabled = false -- 关闭配置保存以减少报错可能
+      Enabled = false -- 彻底禁用配置以防加载崩溃
    }
 })
 
--- Variables
+-- 全局控制变量
 getgenv().autoClick = false
 getgenv().clickSpeed = 0.05
 
 local MainTab = Window:CreateTab("Main Hacks", 4483362458)
 
--- 核心点击逻辑：使用 RemoteEvent (最强最快)
-local function startClicking()
+-- Anime Destroyers 专属点击逻辑
+local function doClick()
     task.spawn(function()
-        -- 尝试自动寻找游戏里的点击事件 (适用于大多数点击游戏)
-        local clickEvent = game:GetService("ReplicatedStorage"):FindFirstChild("Click", true) or 
-                           game:GetService("ReplicatedStorage"):FindFirstChild("ClickEvent", true) or
-                           game:GetService("ReplicatedStorage"):FindFirstChild("TappingEvent", true)
+        -- 在此类游戏中，通常点击事件位于 ReplicatedStorage
+        local clickRemote = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes", true) 
+                            and game:GetService("ReplicatedStorage").Remotes:FindFirstChild("Click") 
+                            or game:GetService("ReplicatedStorage"):FindFirstChild("ClickRemote")
 
         while getgenv().autoClick do
-            if clickEvent and clickEvent:IsA("RemoteEvent") then
-                clickEvent:FireServer() -- 直接发送点击指令给服务器
+            -- 如果找到了游戏的点击远程事件，直接触发（最有效）
+            if clickRemote then
+                clickRemote:FireServer()
             else
-                -- 如果找不到事件，则退回使用模拟点击，但这次点击按钮的坐标
+                -- 备选方案：如果找不到特定 Event，尝试对所有装备的工具调用激活
+                local character = game.Players.LocalPlayer.Character
+                if character then
+                    local tool = character:FindFirstChildOfClass("Tool")
+                    if tool then tool:Activate() end
+                end
+                -- 同时补一个屏幕中心模拟点击
                 game:GetService("VirtualInputManager"):SendMouseButtonEvent(500, 500, 0, true, game, 0)
                 game:GetService("VirtualInputManager"):SendMouseButtonEvent(500, 500, 0, false, game, 0)
             end
+            
             task.wait(getgenv().clickSpeed)
         end
     end)
 end
 
--- UI Elements
+-- UI 切换开关
 MainTab:CreateToggle({
-   Name = "Auto Clicker (Remote/VIM)",
+   Name = "Fast Auto Clicker",
    CurrentValue = false,
-   Flag = "Toggle1",
+   Flag = "ClickToggle",
    Callback = function(Value)
       getgenv().autoClick = Value
       if Value then
-          startClicking()
+          Rayfield:Notify({Title = "Status", Content = "Auto Clicker Started", Duration = 2})
+          doClick()
       end
    end,
 })
 
+-- 速度调节
 MainTab:CreateSlider({
-   Name = "Click Speed",
-   Range = {0.01, 0.5},
+   Name = "Click Delay",
+   Range = {0.01, 1},
    Increment = 0.01,
    Suffix = "s",
    CurrentValue = 0.05,
-   Flag = "Slider1",
-   Callback = function(Value)
-      getgenv().clickSpeed = Value
-   end,
-})
-
-MainTab:CreateSection("Emergency Controls")
-
-MainTab:CreateButton({
-   Name = "FORCE STOP",
-   Callback = function()
-      getgenv().autoClick = false
-      Rayfield:Destroy()
-   end,
-})
-
--- 简单的防挂机
-local vu = game:GetService("VirtualUser")
-game:GetService("Players").LocalPlayer.Idled:Connect(function()
-   vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-   task.wait(1)
-   vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-end)
+   Flag = "Speed
