@@ -166,7 +166,7 @@ local function toggleAntiAFK(state)
             while getgenv().AntiAFK do
                 -- Simulate a jump
                 Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                task.wait(math.random(10, 20)) -- Jump every 10-20 seconds
+                task.wait(math.random(200, 300)) -- Jump every 10-20 seconds
             end
         end)
         Rayfield:Notify({Title = "Kyusuke Hub", Content = "Anti-AFK [ON]", Duration = 2})
