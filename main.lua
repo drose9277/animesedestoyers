@@ -58,4 +58,19 @@ task.spawn(function()
     while true do
         if getgenv().AutoClickActive then
             -- 关键点：将点击坐标设在屏幕左上方外侧
-            VIM:SendMouseButtonEvent(-100,
+            VIM:SendMouseButtonEvent(-100, -100, 0, true, game, 0)
+            VIM:SendMouseButtonEvent(-100, -100, 0, false, game, 0)
+            task.wait(getgenv().ClickSpeed)
+        else
+            task.wait(0.5) -- 停止状态下降低 CPU 占用
+        end
+    end
+end)
+
+-- PC 玩家保留快捷键 X
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.X then
+        getgenv().AutoClickActive = false
+        StopButton.Visible = false
+    end
+end)
