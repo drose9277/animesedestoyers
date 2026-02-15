@@ -1,76 +1,70 @@
--- [[ 1. 加载 UI 库 ]]
+-- [[ 1. 环境初始化 ]]
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local UIS = game:GetService("UserInputService")
+local VIM = game:GetService("VirtualInputManager")
 
--- [[ 2. 全局状态变量 ]]
--- 使用 _G 或 getgenv() 确保变量在脚本运行期间始终可访问
-_G.AutoClickerRunning = false
-_G.ClickDelay = 0.1
+-- 使用 getgenv() 确保在整个执行环境内变量唯一且同步
+getgenv().AutoClickActive = false
+getgenv().ClickSpeed = 0.1
 
--- [[ 3. 创建界面 ]]
+-- [[ 2. 创建 UI 窗口 ]]
 local Window = Rayfield:CreateWindow({
-   Name = "🚀 修复版 AutoClicker",
-   LoadingTitle = "正在加载系统...",
+   Name = "🛡️ 稳定版 AutoClicker",
+   LoadingTitle = "注入安全防护系统...",
    LoadingSubtitle = "by Gemini",
    ConfigurationSaving = { Enabled = false }
 })
 
-local MainTab = Window:CreateTab("主控制面板", 4483362458)
+local MainTab = Window:CreateTab("控制台", 4483362458)
 
--- [[ 4. UI 切换开关 ]]
-local Toggle = MainTab:CreateToggle({
-   Name = "启用连点 (Enable Clicker)",
+-- [[ 3. 功能组件 ]]
+local ClickToggle = MainTab:CreateToggle({
+   Name = "连点开关 (点不中请按 X 键)",
    CurrentValue = false,
-   Flag = "ClickToggle", 
+   Flag = "Toggle1",
    Callback = function(Value)
-      _G.AutoClickerRunning = Value -- 实时更新状态
-      if Value then
-          print("自动点击：已激活")
-      else
-          print("自动点击：已停止")
-      end
+      getgenv().AutoClickActive = Value
    end,
 })
 
--- [[ 5. 速度调节（防卡顿） ]]
 MainTab:CreateSlider({
-   Name = "点击频率 (秒)",
-   Range = {0.05, 1}, -- 建议最低不要低于 0.05，否则会卡死 UI
-   Increment = 0.05,
+   Name = "点击延迟 (秒)",
+   Range = {0.02, 1}, -- 最小值设为 0.02 预防卡死
+   Increment = 0.01,
    Suffix = "s",
    CurrentValue = 0.1,
-   Flag = "SpeedSlider",
+   Flag = "Slider1",
    Callback = function(Value)
-      _G.ClickDelay = Value
+      getgenv().ClickSpeed = Value
    end,
 })
 
--- [[ 6. 核心连点逻辑 - 关键修复点 ]]
--- 使用 task.spawn 将循环放在后台，不阻塞 UI 渲染
+-- [[ 4. 紧急制动系统 (关键修复) ]]
+-- 无论是否在聊天，按 X 强制停止所有逻辑
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.X then
+        getgenv().AutoClickActive = false
+        -- 尝试强制更新 UI 状态（如果 Rayfield 支持）
+        Rayfield:Notify({Title = "!!! 紧急制动 !!!", Content = "所有自动点击已强制切断", Duration = 3})
+    end
+end)
+
+-- [[ 5. 核心循环：采用防阻塞模式 ]]
 task.spawn(function()
-    local VIM = game:GetService("VirtualInputManager")
-    
     while true do
-        -- 核心判断：只有当变量为 true 时才执行点击
-        if _G.AutoClickerRunning then
-            -- 模拟按下并弹起，这是一次完整的点击
+        -- 只有在变量为 true 时才进入点击分支
+        if getgenv().AutoClickActive == true then
+            -- 执行一次点击
             VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
             VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+            
+            -- 动态读取延迟，防止在极速模式下无法读取到关闭信号
+            task.wait(getgenv().ClickSpeed)
+        else
+            -- 当开关关闭时，循环进入“低功耗等待”模式，完全释放 CPU 给 UI
+            task.wait(0.3) 
         end
-        
-        -- 强制等待：如果没有等待时间，游戏会直接崩溃
-        task.wait(_G.ClickDelay) 
     end
 end)
 
-game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.X then
-        _G.AutoClickerRunning = false
-        Rayfield:Notify({Title = "紧急停止", Content = "已通过快捷键 X 关闭点击", Duration = 2})
-    end
-end)
-
-Rayfield:Notify({
-   Title = "脚本注入成功",
-   Content = "如果点击太快导致无法操作，请尝试调高延迟",
-   Duration = 5
-})
+Rayfield:Notify({Title = "启动成功", Content = "按 X 键可随时救命", Duration = 5})
