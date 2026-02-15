@@ -7,8 +7,8 @@ getgenv().ClickSpeed = 0.1
 
 -- [[ 1. 创建 UI 窗口 ]]
 local Window = Rayfield:CreateWindow({
-   Name = "🌐 虚空连点器 (防卡死版)",
-   LoadingTitle = "正在配置屏幕外点击...",
+   Name = "KyosukeHub",
+   LoadingTitle = "Loading...",
    ConfigurationSaving = { Enabled = false }
 })
 
@@ -21,7 +21,7 @@ local StopButton = Instance.new("TextButton", ScreenGui)
 StopButton.Size = UDim2.new(0, 120, 0, 50)
 StopButton.Position = UDim2.new(0.5, -60, 0.1, 0)
 StopButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-StopButton.Text = "🛑 停止连点"
+StopButton.Text = "🛑 Stop Auto Click"
 StopButton.TextColor3 = Color3.new(1, 1, 1)
 StopButton.Visible = false -- 初始隐藏
 StopButton.ZIndex = 10000
@@ -34,7 +34,7 @@ end)
 
 -- [[ 3. 界面功能 ]]
 MainTab:CreateToggle({
-   Name = "开启屏幕外连点",
+   Name = "Start Auto Click",
    CurrentValue = false,
    Flag = "VoidClick",
    Callback = function(Value)
@@ -44,10 +44,10 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateSlider({
-   Name = "点击频率 (秒)",
+   Name = "SPA"
    Range = {0.01, 1},
-   Increment = 0.01,
-   CurrentValue = 0.1,
+   Increment = 0.05,
+   CurrentValue = 0.05,
    Callback = function(Value)
       getgenv().ClickSpeed = Value
    end,
