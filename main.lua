@@ -1,6 +1,3 @@
--- [[ Kyusuke Hub V6 - 极致稳定版 ]]
-
--- 1. 初始化 (防止 nil)
 local Success, Error = pcall(function()
     getgenv().AutoClickRunning = false
     
