@@ -1,10 +1,3 @@
---[[
-    Script: Kyusuke Hub
-    Features: AutoClicker, Anti-AFK, Kill Aura with Keybind Toggle
-    UI Library: Rayfield
-    Language: English
-]]
-
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- Window Settings
