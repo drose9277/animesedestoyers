@@ -1,93 +1,86 @@
--- [[ 1. 基础设置 ]]
+-- 防止重复运行
+if getgenv().KyusukeExecuted then return end
+getgenv().KyusukeExecuted = true
+
 local VIM = game:GetService("VirtualInputManager")
 local UIS = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
-getgenv().AutoClick = false
-getgenv().ClickSpeed = 0.1
+-- 状态设置
+getgenv().Running = false
+getgenv().Delay = 0.1
 
--- 清理旧 UI (防止多次运行叠加)
-if CoreGui:FindFirstChild("KyusukeMobile") then
-    CoreGui.KyusukeMobile:Destroy()
-end
+-- [[ 创建极简控制台 ]]
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "KyusukeV4"
+ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- [[ 2. 创建极简原生 UI (避开第三方库的 Bug) ]]
-local ScreenGui = Instance.new("ScreenGui", CoreGui)
-ScreenGui.Name = "KyusukeMobile"
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Parent = ScreenGui
+Main.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Main.BackgroundTransparency = 0.4
+Main.BorderSizePixel = 0
+Main.Position = UDim2.new(0.5, -60, 0, 10) -- 屏幕顶部正中央
+Main.Size = UDim2.new(0, 120, 0, 80)
+Main.Active = true
+Main.Draggable = true -- 允许你手动拖走
 
--- 主面板
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 200, 0, 150)
-MainFrame.Position = UDim2.new(0.5, -100, 0.4, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Active = true
-MainFrame.Draggable = true -- 这个版本允许你手动拖动到角落
+local Toggle = Instance.new("TextButton")
+Toggle.Name = "Toggle"
+Toggle.Parent = Main
+Toggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+Toggle.Size = UDim2.new(1, 0, 0.6, 0)
+Toggle.Font = Enum.Font.SourceSansBold
+Toggle.Text = "START"
+Toggle.TextColor3 = Color3.new(1, 1, 1)
+Toggle.TextSize = 24
 
--- 标题
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "🔥 Kyusuke Hub"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+local Info = Instance.new("TextLabel")
+Info.Name = "Info"
+Info.Parent = Main
+Info.Position = UDim2.new(0, 0, 0.6, 0)
+Info.Size = UDim2.new(1, 0, 0.4, 0)
+Info.BackgroundTransparency = 1
+Info.Text = "Speed: 0.1s (X Stop)"
+Info.TextColor3 = Color3.new(1, 1, 1)
+Info.TextSize = 14
 
--- 开关按钮
-local ToggleBtn = Instance.new("TextButton", MainFrame)
-ToggleBtn.Size = UDim2.new(0.8, 0, 0, 40)
-ToggleBtn.Position = UDim2.new(0.1, 0, 0.3, 0)
-ToggleBtn.Text = "开启连点 (OFF)"
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+-- [[ 核心逻辑 ]]
 
--- 速度调节按钮 (简单点，点一次加/减)
-local SpeedBtn = Instance.new("TextButton", MainFrame)
-SpeedBtn.Size = UDim2.new(0.8, 0, 0, 30)
-SpeedBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
-SpeedBtn.Text = "当前延迟: 0.1s"
-SpeedBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-SpeedBtn.TextColor3 = Color3.new(1, 1, 1)
-
--- [[ 3. 核心逻辑修复 ]]
-
--- 切换开关
-ToggleBtn.MouseButton1Click:Connect(function()
-    getgenv().AutoClick = not getgenv().AutoClick
-    if getgenv().AutoClick then
-        ToggleBtn.Text = "运行中 (按 X 或再点我停止)"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-        -- 💡 关键：开启后轻微透明，防止干扰
-        MainFrame.BackgroundTransparency = 0.5
+Toggle.MouseButton1Click:Connect(function()
+    getgenv().Running = not getgenv().Running
+    if getgenv().Running then
+        Toggle.Text = "STOPPING..."
+        Toggle.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
     else
-        ToggleBtn.Text = "开启连点 (OFF)"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-        MainFrame.BackgroundTransparency = 0
+        Toggle.Text = "START"
+        Toggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     end
 end)
 
--- 调节速度
-SpeedBtn.MouseButton1Click:Connect(function()
-    if getgenv().ClickSpeed <= 0.05 then
-        getgenv().ClickSpeed = 0.5
-    else
-        getgenv().ClickSpeed = getgenv().ClickSpeed - 0.05
+-- 快捷键停止
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.X then
+        getgenv().Running = false
+        Toggle.Text = "START"
+        Toggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     end
-    SpeedBtn.Text = "当前延迟: " .. string.format("%.2f", getgenv().ClickSpeed) .. "s"
 end)
 
--- 连点循环
-task.spawn(function()
+-- 连点循环 (使用最底层的 Spawn)
+spawn(function()
     while true do
-        if getgenv().AutoClick then
-            -- 采用“绝对安全坐标”：点屏幕最右下角边缘
-            -- 这样即使它想拉动 UI，也因为在边缘拉不动
-            VIM:SendMouseButtonEvent(10, 10, 0, true, game, 0)
-            VIM:SendMouseButtonEvent(10, 10, 0, false, game, 0)
-            task.wait(getgenv().ClickSpeed)
+        if getgenv().Running then
+            -- 坐标 (-100, -100) 如果无效，请尝试改回 (500, 500)
+            VIM:SendMouseButtonEvent(-100, -100, 0, true, game, 0)
+            VIM:SendMouseButtonEvent(-100, -100, 0, false, game, 0)
+            task.wait(getgenv().Delay)
         else
-            task.wait(0.3)
+            task.wait(0.5)
         end
     end
 end)
 
--- PC 快捷键
-UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.X then
+print("Kyusuke Hub V4 已注入")
