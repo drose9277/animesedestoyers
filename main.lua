@@ -1,103 +1,244 @@
--- Kyusuke Hub: Anime Destroyers (Native UI Version)
--- No external library needed = No more Nil/Padding Errors
+--[[
+    Script: Kyusuke Hub (v3.5 Final + Auto Farm)
+    Features: Smooth Clicker, NPC Kill Aura, Auto Farm, 17-min Anti-AFK, WalkSpeed
+]]
 
-local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local Title = Instance.new("TextLabel")
-local ClickToggle = Instance.new("TextButton")
-local FarmToggle = Instance.new("TextButton")
-local StatusLabel = Instance.new("TextLabel")
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- GUI 基础设置
-ScreenGui.Name = "KyusukeHubNative"
-ScreenGui.Parent = game:GetService("CoreGui")
-ScreenGui.ResetOnSpawn = false
+-- 1. 初始化变量 (全局变量)
+getgenv().AutoClick = false
+getgenv().ClickDelay = 0.1
+getgenv().KillAura = false
+getgenv().AuraRadius = 25
+getgenv().AutoFarm = false -- 新增：自动刷怪开关
+getgenv().AntiAFKEnabled = false
+getgenv().WalkSpeedValue = 16 
 
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-MainFrame.Size = UDim2.new(0, 200, 0, 250)
-MainFrame.Active = true
-MainFrame.Draggable = true -- 允许鼠标拖动界面
+local VIM = game:GetService("VirtualInputManager")
+local LP = game:GetService("Players").LocalPlayer
+local UIS = game:GetService("UserInputService")
 
-Title.Parent = MainFrame
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "Kyusuke Hub"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+-- 窗口创建
+local Window = Rayfield:CreateWindow({
+    Name = "🔥 Kyusuke Hub",
+    LoadingTitle = "Loading Kyusuke Hub v3.5...",
+    LoadingSubtitle = "by Kyusuke",
+    ConfigurationSaving = { Enabled = true, FolderName = "KyusukeHub" }
+})
 
--- 变量
-getgenv().autoClick = false
-getgenv().autoFarm = false
-
--- 自动点击函数
-local function doClick()
-    task.spawn(function()
-        while getgenv().autoClick do
-            local vim = game:GetService("VirtualInputManager")
-            vim:SendMouseButtonEvent(500, 500, 0, true, game, 0)
-            vim:SendMouseButtonEvent(500, 500, 0, false, game, 0)
-            task.wait(0.05)
-        end
-    end)
-end
-
--- 自动刷怪函数 (自动找最近的怪)
-local function doFarm()
-    task.spawn(function()
-        while getgenv().autoFarm do
-            pcall(function()
-                local player = game.Players.LocalPlayer
+-- [ 核心逻辑: 自动寻路打怪 (Auto Farm) ]
+task.spawn(function()
+    while task.wait(0.3) do
+        if getgenv().AutoFarm then
+            local char = LP.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
                 local target = nil
                 local dist = math.huge
                 
-                -- 寻找最近的怪
-                for _, v in pairs(workspace:GetDescendants()) do
-                    if v:IsA("Model") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and not game.Players:GetPlayerFromCharacter(v) then
-                        local d = (player.Character.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
-                        if d < dist then
-                            dist = d
-                            target = v
+                -- 遍历寻找最近的 NPC
+                for _, v in pairs(workspace:GetChildren()) do
+                    if v:IsA("Model") and v:FindFirstChild("Humanoid") and v ~= char then
+                        local m_hrp = v:FindFirstChild("HumanoidRootPart")
+                        -- 检查健康值并排除自己
+                        if m_hrp and v.Humanoid.Health > 0 then
+                            local d = (hrp.Position - m_hrp.Position).Magnitude
+                            if d < dist then
+                                dist = d
+                                target = m_hrp
+                            end
                         end
                     end
                 end
                 
+                -- 瞬移到怪物面前并保持微小距离 (避免穿模)
                 if target then
-                    player.Character.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
+                    hrp.CFrame = target.CFrame * CFrame.new(0, 0, 4)
                 end
-            end)
-            task.wait(0.1)
+            end
         end
-    end)
-end
-
--- UI 按钮设置
-ClickToggle.Parent = MainFrame
-ClickToggle.Position = UDim2.new(0.1, 0, 0.2, 0)
-ClickToggle.Size = UDim2.new(0.8, 0, 0, 40)
-ClickToggle.Text = "Auto Click: OFF"
-ClickToggle.MouseButton1Click:Connect(function()
-    getgenv().autoClick = not getgenv().autoClick
-    ClickToggle.Text = getgenv().autoClick and "Auto Click: ON" or "Auto Click: OFF"
-    ClickToggle.BackgroundColor3 = getgenv().autoClick and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
-    if getgenv().autoClick then doClick() end
+    end
 end)
 
-FarmToggle.Parent = MainFrame
-FarmToggle.Position = UDim2.new(0.1, 0, 0.45, 0)
-FarmToggle.Size = UDim2.new(0.8, 0, 0, 40)
-FarmToggle.Text = "Auto Farm: OFF"
-FarmToggle.MouseButton1Click:Connect(function()
-    getgenv().autoFarm = not getgenv().autoFarm
-    FarmToggle.Text = getgenv().autoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
-    FarmToggle.BackgroundColor3 = getgenv().autoFarm and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
-    if getgenv().autoFarm then doFarm() end
+-- [ 逻辑: 连点器 ]
+task.spawn(function()
+    while true do
+        if getgenv().AutoClick or getgenv().KillAura then
+            VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+            VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+        end
+        task.wait(getgenv().ClickDelay)
+    end
 end)
 
-StatusLabel.Parent = MainFrame
-StatusLabel.Position = UDim2.new(0, 0, 0.8, 0)
-StatusLabel.Size = UDim2.new(1, 0, 0, 30)
-StatusLabel.Text = "Status: Native UI Ready"
-StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusLabel.BackgroundTransparency = 1
+-- [ 逻辑: NPC Kill Aura ]
+task.spawn(function()
+    while task.wait(0.2) do
+        if getgenv().KillAura then
+            local char = LP.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                for _, v in pairs(workspace:GetChildren()) do
+                    if v:IsA("Model") and v:FindFirstChild("Humanoid") and v ~= char then
+                        local hrp = v:FindFirstChild("HumanoidRootPart")
+                        if hrp and (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= getgenv().AuraRadius then
+                            if v.Humanoid.Health > 0 then
+                                -- Kill Aura 触发点击逻辑
+                                VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- [ 逻辑: 移速维持 ]
+task.spawn(function()
+    while true do
+        local char = LP.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        if hum and hum.Health > 0 then
+            if hum.WalkSpeed ~= getgenv().WalkSpeedValue then
+                hum.WalkSpeed = getgenv().WalkSpeedValue
+            end
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- [ 逻辑: Anti-AFK ]
+task.spawn(function()
+    while true do
+        if getgenv().AntiAFKEnabled then
+            if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+                LP.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end
+        task.wait(1020) -- 17分钟
+    end
+end)
+
+-- [ UI 界面 ]
+local CombatTab = Window:CreateTab("Combat", 4483362458)
+
+CombatTab:CreateToggle({
+    Name = "Auto Farm (Lock & TP)",
+    CurrentValue = false,
+    Flag = "T_AutoFarm",
+    Callback = function(Value) 
+        getgenv().AutoFarm = Value 
+        getgenv().KillAura = Value -- 开启刷怪时自动开启光环
+    end,
+})
+
+CombatTab:CreateDivider()
+
+local ClickToggle = CombatTab:CreateToggle({
+    Name = "Auto Clicker",
+    CurrentValue = false,
+    Flag = "T1",
+    Callback = function(Value) getgenv().AutoClick = Value end,
+})
+
+CombatTab:CreateKeybind({
+    Name = "Clicker Hotkey (R)",
+    CurrentKeybind = "R",
+    HoldToInteract = false,
+    Callback = function()
+        getgenv().AutoClick = not getgenv().AutoClick
+        ClickToggle:Set(getgenv().AutoClick)
+    end,
+})
+
+CombatTab:CreateSlider({
+    Name = "Click Speed",
+    Range = {0.05, 1},
+    Increment = 0.05,
+    Suffix = "s",
+    CurrentValue = 0.1,
+    Callback = function(Value) getgenv().ClickDelay = Value end,
+})
+
+CombatTab:CreateDivider()
+
+CombatTab:CreateToggle({
+    Name = "NPC Kill Aura",
+    CurrentValue = false,
+    Flag = "T2",
+    Callback = function(Value) getgenv().KillAura = Value end,
+})
+
+CombatTab:CreateSlider({
+    Name = "Aura Range",
+    Range = {10, 100},
+    Increment = 1,
+    Suffix = "studs",
+    CurrentValue = 25,
+    Callback = function(Value) getgenv().AuraRadius = Value end,
+})
+
+local UtilTab = Window:CreateTab("Utility", 4483362458)
+
+UtilTab:CreateInput({
+    Name = "Custom WalkSpeed",
+    PlaceholderText = "Default: 16",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local num = tonumber(Text)
+        if num then getgenv().WalkSpeedValue = num end
+    end,
+})
+
+UtilTab:CreateToggle({
+    Name = "17-Min Anti-AFK",
+    CurrentValue = false,
+    Flag = "T3",
+    Callback = function(Value) getgenv().AntiAFKEnabled = Value end,
+})
+
+-- [ 悬浮 Hotbar 按钮 ]
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.Name = "KyusukeHotbar"
+
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+ToggleButton.Position = UDim2.new(0, 15, 0.5, 0)
+ToggleButton.Size = UDim2.new(0, 65, 0, 65)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Text = "FARM: OFF"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 10
+ToggleButton.Draggable = true 
+
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = ToggleButton
+
+ToggleButton.MouseButton1Click:Connect(function()
+    getgenv().AutoFarm = not getgenv().AutoFarm
+    getgenv().KillAura = getgenv().AutoFarm
+end)
+
+-- 实时更新悬浮按钮状态
+task.spawn(function()
+    while task.wait(0.1) do
+        if getgenv().AutoFarm then
+            ToggleButton.Text = "FARM: ON"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+        else
+            ToggleButton.Text = "FARM: OFF"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+        end
+    end
+end)
+
+Rayfield:Notify({
+    Title = "Kyusuke Hub v3.5+",
+    Content = "Auto Farm Feature Integrated!",
+    Duration = 5
+})
