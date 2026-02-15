@@ -1,83 +1,100 @@
 --[[
-    Kyusuke Hub - Anime Destroyers (Rayfield Fixed)
-    Status: UI Error Patched
+    Script: Kyusuke Hub
+    Features: AutoClicker with Keybind Toggle
+    UI Library: Rayfield
 ]]
 
--- 尝试使用兼容性最好的 Rayfield 加载源
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
+-- 窗口设置
 local Window = Rayfield:CreateWindow({
-   Name = "Kyusuke Hub | Anime Destroyers",
-   LoadingTitle = "Kyusuke Hub",
-   LoadingSubtitle = "by Kyusuke",
-   ConfigurationSaving = {
-      Enabled = false, -- 必须设为 false 以修复 Padding 报错
-      FolderName = "KyusukeHub"
-   },
-   Discord = {
-      Enabled = false
-   }
+    Name = "🔥 Kyusuke Hub",
+    LoadingTitle = "正在载入 Kyusuke Hub...",
+    LoadingSubtitle = "by Kyusuke",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "KyusukeHub_Config", 
+        FileName = "Settings"
+    },
+    KeySystem = false
 })
 
--- 变量
-getgenv().autoClick = false
-getgenv().clickSpeed = 0.05
+-- 全局变量
+getgenv().AutoClick = false
+getgenv().ClickDelay = 0.1
+local UIS = game:GetService("UserInputService")
+local VIM = game:GetService("VirtualInputManager")
 
-local MainTab = Window:CreateTab("Main", 4483362458)
+-- 主标签页
+local MainTab = Window:CreateTab("战斗功能", 4483362458)
 
--- 点击逻辑
-local function startClicking()
-    task.spawn(function()
-        while getgenv().autoClick do
-            -- 模拟屏幕中心点击（Anime Destroyers 通用）
-            local vim = game:GetService("VirtualInputManager")
-            vim:SendMouseButtonEvent(500, 500, 0, true, game, 0)
-            vim:SendMouseButtonEvent(500, 500, 0, false, game, 0)
-            
-            task.wait(getgenv().clickSpeed)
-        end
-    end)
+-- 1. 自动点击逻辑函数
+local function toggleClick(state)
+    getgenv().AutoClick = state
+    if state then
+        task.spawn(function()
+            while getgenv().AutoClick do
+                -- 模拟鼠标左键点击
+                VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                task.wait(getgenv().ClickDelay)
+            end
+        end)
+        Rayfield:Notify({Title = "Kyusuke Hub", Content = "自动点击已【开启】", Duration = 2})
+    else
+        Rayfield:Notify({Title = "Kyusuke Hub", Content = "自动点击已【关闭】", Duration = 2})
+    end
 end
 
--- UI 功能
-MainTab:CreateToggle({
-   Name = "Auto Clicker",
-   CurrentValue = false,
-   Flag = "ClickToggle",
-   Callback = function(Value)
-      getgenv().autoClick = Value
-      if Value then
-          startClicking()
-      end
-   end,
+-- 2. UI 开关
+local ClickToggle = MainTab:CreateToggle({
+    Name = "开启自动点击",
+    CurrentValue = false,
+    Flag = "AutoClickFlag",
+    Callback = function(Value)
+        if Value ~= getgenv().AutoClick then -- 避免重复触发
+            toggleClick(Value)
+        end
+    end,
 })
 
+-- 3. 快捷键监听 (默认 R 键)
+UIS.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end -- 如果正在打字则不触发
+    
+    if input.KeyCode == Enum.KeyCode.R then -- 你可以在这里把 R 改成其他按键
+        local newState = not getgenv().AutoClick
+        ClickToggle:Set(newState) -- 这会自动触发上面的 Callback
+    end
+end)
+
+-- 4. 速度调节
 MainTab:CreateSlider({
-   Name = "Click Speed",
-   Range = {0.01, 1},
-   Increment = 0.01,
-   Suffix = "s",
-   CurrentValue = 0.05,
-   Flag = "SpeedSlider",
-   Callback = function(Value)
-      getgenv().clickSpeed = Value
-   end,
+    Name = "点击延迟 (秒)",
+    Range = {0.01, 1},
+    Increment = 0.05,
+    Suffix = "s",
+    CurrentValue = 0.1,
+    Flag = "DelaySlider",
+    Callback = function(Value)
+        getgenv().ClickDelay = Value
+    end,
 })
 
--- 强行停止
-MainTab:CreateSection("System")
+-- 5. 提示标签
+MainTab:CreateLabel("按键盘 [ R ] 键可快速开关点击器")
 
-MainTab:CreateButton({
-   Name = "FORCE STOP",
-   Callback = function()
-      getgenv().autoClick = false
-      task.wait(0.1)
-      Rayfield:Destroy()
-   end,
+-- 其他功能
+local OtherTab = Window:CreateTab("其他", 4483362458)
+OtherTab:CreateButton({
+    Name = "销毁 UI",
+    Callback = function()
+        Rayfield:Destroy()
+    end,
 })
 
 Rayfield:Notify({
-   Title = "Kyusuke Hub Loaded",
-   Content = "Enjoy your game!",
-   Duration = 5,
+    Title = "Kyusuke Hub 已注入",
+    Content = "按 R 键开启你的点击之旅！",
+    Duration = 5
 })
