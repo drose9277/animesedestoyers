@@ -1,51 +1,66 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
+-- 全局变量控制
+getgenv().AutoClickSpeed = 0.01 -- 默认间隔 (秒)
+getgenv().Clicking = false
+
 local Window = Rayfield:CreateWindow({
-   Name = "🚀 自动点击辅助器",
-   LoadingTitle = "正在加载脚本...",
-   LoadingSubtitle = "by YourName",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "MyScriptConfig",
-      FileName = "AutoClickerConfig"
-   }
+   Name = "kyusuke hub",
+   LoadingTitle = "正在载入脚本...",
+   ConfigurationSaving = { Enabled = false }
 })
 
-local Tab = Window:CreateTab("主要功能", 4483362458) -- 图标 ID
+local Tab = Window:CreateTab("核心功能", 4483362458)
 
--- 变量定义
-getgenv().autoClick = false
-
--- 自动点击逻辑
-local function doAutoClick()
-    spawn(function()
-        while getgenv().autoClick do
-            -- 这里模拟点击操作，具体路径需根据游戏内的按钮修改
-            -- 下面是通用的虚拟激活示例
-            local VirtualInputManager = game:GetService("VirtualInputManager")
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+-- 极速点击函数
+local function startClicking()
+    task.spawn(function()
+        while getgenv().Clicking do
+            -- 使用 VirtualInputManager 模拟硬件级点击
+            game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, true, game, 0)
+            game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, false, game, 0)
             
-            task.wait(0.1) -- 点击间隔
+            -- 使用 task.wait() 比 wait() 更精准且不容易崩溃
+            task.wait(getgenv().AutoClickSpeed)
         end
     end)
 end
 
--- UI 切换开关
-local Toggle = Tab:CreateToggle({
-   Name = "开启自动点击 (Auto Click)",
-   CurrentValue = false,
-   Flag = "AutoClickFlag",
+-- UI 控件：速度调节
+Tab:CreateSlider({
+   Name = "点击间隔 (秒)",
+   Info = "数值越小点击越快",
+   Range = {0.001, 1},
+   Increment = 0.01,
+   Suffix = "s",
+   CurrentValue = 0.01,
+   Flag = "SpeedSlider",
    Callback = function(Value)
-      getgenv().autoClick = Value
+      getgenv().AutoClickSpeed = Value
+   end,
+})
+
+-- UI 控件：开关与强行停止
+Tab:CreateToggle({
+   Name = "开启极速点击",
+   CurrentValue = false,
+   Flag = "ClickToggle",
+   Callback = function(Value)
+      getgenv().Clicking = Value
       if Value then
-          Rayfield:Notify({Title = "已开启", Content = "自动点击正在运行", Duration = 2})
-          doAutoClick()
+          startClicking()
+      else
+          -- 强行停止逻辑：由于 while 循环检查 getgenv().Clicking，设置为 false 后会立即退出循环
+          Rayfield:Notify({Title = "已停止", Content = "点击脚本已安全关闭", Duration = 2})
       end
    end,
 })
 
--- 标签页
-local Label = Tab:CreateLabel("请确保你在需要点击的区域上方")
-
-Rayfield:Notify({Title = "加载成功", Content = "脚本已准备就绪！", Duration = 5})
+-- 强行销毁 UI 按钮
+Tab:CreateButton({
+   Name = "完全卸载脚本 (Emergency Stop)",
+   Callback = function()
+       getgenv().Clicking = false -- 先停逻辑
+       Rayfield:Destroy() -- 再关 UI
+   end,
+})
