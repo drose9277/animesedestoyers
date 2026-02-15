@@ -119,7 +119,7 @@ MainTab:CreateSlider({
 local UtilTab = Window:CreateTab("Utility", 4483362458)
 
 UtilTab:CreateToggle({
-    Name = "17-Min Anti-AFK",
+    Name = "Anti-AFK",
     CurrentValue = false,
     Flag = "T3",
     Callback = function(Value) getgenv().AntiAFKEnabled = Value end,
