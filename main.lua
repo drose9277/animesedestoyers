@@ -30,7 +30,7 @@ local ClickToggle = MainTab:CreateToggle({
 MainTab:CreateSlider({
    Name = "点击延迟 (秒)",
    Range = {0.02, 1}, -- 最小值设为 0.02 预防卡死
-   Increment = 0.01,
+   Increment = 0.05,
    Suffix = "s",
    CurrentValue = 0.1,
    Flag = "Slider1",
