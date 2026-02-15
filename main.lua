@@ -57,6 +57,42 @@ task.spawn(function()
     end
 end)
 
+-- WalkSpeed 变量初始化
+getgenv().WalkSpeedValue = 16 -- Roblox 默认速度是 16
+
+-- 在 Utility 标签页中添加输入框
+UtilTab:CreateInput({
+    Name = "Custom WalkSpeed",
+    PlaceholderText = "Default is 16",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local num = tonumber(Text)
+        if num then
+            getgenv().WalkSpeedValue = num
+            -- 立即应用到当前角色
+            if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+                LP.Character.Humanoid.WalkSpeed = num
+            end
+        else
+            Rayfield:Notify({Title = "Error", Content = "Please enter a valid number!", Duration = 2})
+        end
+    end,
+})
+
+-- 保持速度逻辑（防止游戏重置你的速度）
+task.spawn(function()
+    while true do
+        if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+            -- 如果当前速度不等于我们设置的值，就强行改回去
+            if LP.Character.Humanoid.WalkSpeed ~= getgenv().WalkSpeedValue then
+                LP.Character.Humanoid.WalkSpeed = getgenv().WalkSpeedValue
+            end
+        end
+        task.wait(0.5) -- 每0.5秒检查一次，防止被游戏逻辑重置
+    end
+end)
+
+
 -- [ 功能逻辑: Anti-AFK ]
 task.spawn(function()
     while true do
