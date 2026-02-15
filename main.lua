@@ -5,7 +5,7 @@ getgenv().AutoClickSpeed = 0.01 -- 默认间隔 (秒)
 getgenv().Clicking = false
 
 local Window = Rayfield:CreateWindow({
-   Name = "kyusuke hub",
+   Name = "🚀 极速点击器 Pro",
    LoadingTitle = "正在载入脚本...",
    ConfigurationSaving = { Enabled = false }
 })
