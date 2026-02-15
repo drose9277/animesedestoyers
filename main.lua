@@ -1,56 +1,51 @@
 --[[
-    Script: Kyusuke Hub (v3.5 Final + Target Filter)
-    Features: Smooth Clicker, NPC Kill Aura, Auto Farm, Name Filter, Anti-AFK
+    Script: Kyusuke Hub (v3.6 Fixed)
+    Fix: 修复了扫描不到怪物的问题，优化了瞬移逻辑
 ]]
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- 1. 初始化变量
-getgenv().AutoClick = false
-getgenv().ClickDelay = 0.1
-getgenv().KillAura = false
-getgenv().AuraRadius = 25
 getgenv().AutoFarm = false
-getgenv().TargetName = "" -- 新增：目标名字过滤
-getgenv().AntiAFKEnabled = false
-getgenv().WalkSpeedValue = 16 
+getgenv().KillAura = false
+getgenv().TargetName = "" -- 为空则打所有怪
+getgenv().ClickDelay = 0.1
+getgenv().WalkSpeedValue = 16
 
 local VIM = game:GetService("VirtualInputManager")
 local LP = game:GetService("Players").LocalPlayer
 
 -- 窗口创建
 local Window = Rayfield:CreateWindow({
-    Name = "🔥 Kyusuke Hub v3.5",
-    LoadingTitle = "Loading Kyusuke Hub...",
-    LoadingSubtitle = "Target Filter Edition",
+    Name = "🔥 Kyusuke Hub v3.6 (Fixed)",
+    LoadingTitle = "Fixing Auto Farm...",
+    LoadingSubtitle = "Scanning Workspace...",
     ConfigurationSaving = { Enabled = true, FolderName = "KyusukeHub" }
 })
 
--- [ 核心逻辑: 自动寻路打怪 (带名字过滤) ]
+-- [ 核心逻辑: 深度扫描刷怪 ]
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.5) do
         if getgenv().AutoFarm then
             local char = LP.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
             if hrp then
                 local target = nil
                 local dist = math.huge
                 
-                for _, v in pairs(workspace:GetChildren()) do
-                    -- 检查是否为模型、有血条、不是自己
-                    if v:IsA("Model") and v:FindFirstChild("Humanoid") and v ~= char then
-                        local m_hrp = v:FindFirstChild("HumanoidRootPart")
-                        if m_hrp and v.Humanoid.Health > 0 then
-                            
-                            -- 名字过滤逻辑
-                            local canTarget = false
-                            if getgenv().TargetName == "" or getgenv().TargetName == " " then
-                                canTarget = true -- 如果没填名字，打所有怪
-                            elseif string.find(string.lower(v.Name), string.lower(getgenv().TargetName)) then
-                                canTarget = true -- 如果名字匹配，打它
+                -- 使用 GetDescendants 深度遍历，解决怪物在文件夹里的问题
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("Humanoid") and v.Parent ~= char and v.Health > 0 then
+                        local m_hrp = v.Parent:FindFirstChild("HumanoidRootPart")
+                        if m_hrp then
+                            -- 名字过滤
+                            local nameMatch = false
+                            if getgenv().TargetName == "" or string.find(string.lower(v.Parent.Name), string.lower(getgenv().TargetName)) then
+                                nameMatch = true
                             end
 
-                            if canTarget then
+                            if nameMatch then
                                 local d = (hrp.Position - m_hrp.Position).Magnitude
                                 if d < dist then
                                     dist = d
@@ -61,18 +56,20 @@ task.spawn(function()
                     end
                 end
                 
+                -- 执行瞬移
                 if target then
-                    hrp.CFrame = target.CFrame * CFrame.new(0, 0, 4)
+                    -- 传送到怪物头顶上方 4 格，防止卡进地里或被撞飞
+                    hrp.CFrame = target.CFrame * CFrame.new(0, 4, 0)
                 end
             end
         end
     end
 end)
 
--- [ 逻辑: 连点/光环逻辑 ]
+-- [ 逻辑: 攻击触发 ]
 task.spawn(function()
     while true do
-        if getgenv().AutoClick or getgenv().KillAura then
+        if getgenv().AutoFarm or getgenv().KillAura then
             VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
             VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
         end
@@ -84,108 +81,39 @@ end)
 local CombatTab = Window:CreateTab("Combat", 4483362458)
 
 CombatTab:CreateToggle({
-    Name = "Auto Farm (Lock & TP)",
+    Name = "Auto Farm (Deep Scan)",
     CurrentValue = false,
-    Flag = "T_AutoFarm",
-    Callback = function(Value) 
-        getgenv().AutoFarm = Value 
-        getgenv().KillAura = Value 
-    end,
+    Flag = "T_Farm",
+    Callback = function(Value) getgenv().AutoFarm = Value end,
 })
 
--- 名字过滤输入框
 CombatTab:CreateInput({
-    Name = "Target NPC Name",
-    PlaceholderText = "Example: Slime (Empty = All)",
+    Name = "Monster Name (Must Match!)",
+    PlaceholderText = "e.g. Bandit",
     RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        getgenv().TargetName = Text
-        Rayfield:Notify({
-            Title = "Target Set",
-            Content = "Now targeting: " .. (Text == "" and "All NPCs" or Text),
-            Duration = 3
-        })
-    end,
-})
-
-CombatTab:CreateDivider()
-
-local ClickToggle = CombatTab:CreateToggle({
-    Name = "Auto Clicker",
-    CurrentValue = false,
-    Flag = "T1",
-    Callback = function(Value) getgenv().AutoClick = Value end,
+    Callback = function(Text) getgenv().TargetName = Text end,
 })
 
 CombatTab:CreateSlider({
-    Name = "Click Speed",
-    Range = {0.05, 1},
+    Name = "Attack Speed",
+    Range = {0.01, 1},
     Increment = 0.05,
-    Suffix = "s",
     CurrentValue = 0.1,
     Callback = function(Value) getgenv().ClickDelay = Value end,
 })
 
 local UtilTab = Window:CreateTab("Utility", 4483362458)
-
-UtilTab:CreateInput({
-    Name = "Custom WalkSpeed",
-    PlaceholderText = "Default: 16",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        local num = tonumber(Text)
-        if num then getgenv().WalkSpeedValue = num end
-    end,
+UtilTab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16, 200},
+    Increment = 1,
+    CurrentValue = 16,
+    Callback = function(v) getgenv().WalkSpeedValue = v end,
 })
 
-UtilTab:CreateToggle({
-    Name = "17-Min Anti-AFK",
-    CurrentValue = false,
-    Flag = "T3",
-    Callback = function(Value) getgenv().AntiAFKEnabled = Value end,
-})
-
--- [ 悬浮按钮 ]
-local ScreenGui = Instance.new("ScreenGui")
-local ToggleButton = Instance.new("TextButton")
-local UICorner = Instance.new("UICorner")
-
-ScreenGui.Parent = game:GetService("CoreGui")
-ToggleButton.Parent = ScreenGui
-ToggleButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-ToggleButton.Position = UDim2.new(0, 15, 0.5, 0)
-ToggleButton.Size = UDim2.new(0, 65, 0, 65)
-ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Text = "FARM: OFF"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextSize = 10
-ToggleButton.Draggable = true 
-UICorner.CornerRadius = UDim.new(0, 12)
-UICorner.Parent = ToggleButton
-
-ToggleButton.MouseButton1Click:Connect(function()
-    getgenv().AutoFarm = not getgenv().AutoFarm
-    getgenv().KillAura = getgenv().AutoFarm
-end)
-
+-- 移速维持
 task.spawn(function()
-    while task.wait(0.1) do
-        if getgenv().AutoFarm then
-            ToggleButton.Text = "FARM: ON"
-            ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-        else
-            ToggleButton.Text = "FARM: OFF"
-            ToggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
-        end
-    end
-end)
-
--- 移速逻辑保持
-task.spawn(function()
-    while true do
-        pcall(function()
-            LP.Character.Humanoid.WalkSpeed = getgenv().WalkSpeedValue
-        end)
-        task.wait(0.5)
+    while task.wait(0.5) do
+        pcall(function() LP.Character.Humanoid.WalkSpeed = getgenv().WalkSpeedValue end)
     end
 end)
