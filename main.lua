@@ -1,61 +1,70 @@
---[[
-    Kyusuke Hub - Anime Destroyers (Auto-Farm Edition)
-    Status: UI Error Patched + Auto Farm Added
-]]
+-- Kyusuke Hub: Anime Destroyers (Native UI Version)
+-- No external library needed = No more Nil/Padding Errors
 
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local ClickToggle = Instance.new("TextButton")
+local FarmToggle = Instance.new("TextButton")
+local StatusLabel = Instance.new("TextLabel")
 
-local Window = Rayfield:CreateWindow({
-   Name = "Kyusuke Hub | Anime Destroyers",
-   LoadingTitle = "Kyusuke Hub",
-   LoadingSubtitle = "by Kyusuke",
-   ConfigurationSaving = {
-      Enabled = false
-   }
-})
+-- GUI 基础设置
+ScreenGui.Name = "KyusukeHubNative"
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.ResetOnSpawn = false
 
--- 全局变量
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
+MainFrame.Size = UDim2.new(0, 200, 0, 250)
+MainFrame.Active = true
+MainFrame.Draggable = true -- 允许鼠标拖动界面
+
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "Kyusuke Hub"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+
+-- 变量
 getgenv().autoClick = false
 getgenv().autoFarm = false
-getgenv().selectedMob = "None"
-getgenv().clickSpeed = 0.05
 
-local MainTab = Window:CreateTab("Main", 4483362458)
-local FarmTab = Window:CreateTab("Mob Farm", 4483362458) -- 新增刷怪标签页
-
--- [点击逻辑]
-local function startClicking()
+-- 自动点击函数
+local function doClick()
     task.spawn(function()
         while getgenv().autoClick do
             local vim = game:GetService("VirtualInputManager")
             vim:SendMouseButtonEvent(500, 500, 0, true, game, 0)
             vim:SendMouseButtonEvent(500, 500, 0, false, game, 0)
-            task.wait(getgenv().clickSpeed)
+            task.wait(0.05)
         end
     end)
 end
 
--- [自动刷怪逻辑]
-local function startFarm()
+-- 自动刷怪函数 (自动找最近的怪)
+local function doFarm()
     task.spawn(function()
         while getgenv().autoFarm do
             pcall(function()
-                if getgenv().selectedMob ~= "None" then
-                    -- 这里的路径 "Workspace.Enemies" 需要根据游戏的实际名称修改
-                    -- 脚本会尝试在 Workspace 里寻找名字匹配的怪物
-                    for _, mob in pairs(workspace:GetDescendants()) do
-                        if mob.Name == getgenv().selectedMob and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-                            -- 传送玩家到怪物位置 (保持一点上方距离防止掉进地板)
-                            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
-                            
-                            -- 传送时自动点击攻击
-                            local vim = game:GetService("VirtualInputManager")
-                            vim:SendMouseButtonEvent(500, 500, 0, true, game, 0)
-                            vim:SendMouseButtonEvent(500, 500, 0, false, game, 0)
-                            
-                            break -- 锁定一个目标，直到它死亡
+                local player = game.Players.LocalPlayer
+                local target = nil
+                local dist = math.huge
+                
+                -- 寻找最近的怪
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("Model") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and not game.Players:GetPlayerFromCharacter(v) then
+                        local d = (player.Character.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
+                        if d < dist then
+                            dist = d
+                            target = v
                         end
                     end
+                end
+                
+                if target then
+                    player.Character.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
                 end
             end)
             task.wait(0.1)
@@ -63,80 +72,32 @@ local function startFarm()
     end)
 end
 
--- --- UI 功能 ---
+-- UI 按钮设置
+ClickToggle.Parent = MainFrame
+ClickToggle.Position = UDim2.new(0.1, 0, 0.2, 0)
+ClickToggle.Size = UDim2.new(0.8, 0, 0, 40)
+ClickToggle.Text = "Auto Click: OFF"
+ClickToggle.MouseButton1Click:Connect(function()
+    getgenv().autoClick = not getgenv().autoClick
+    ClickToggle.Text = getgenv().autoClick and "Auto Click: ON" or "Auto Click: OFF"
+    ClickToggle.BackgroundColor3 = getgenv().autoClick and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
+    if getgenv().autoClick then doClick() end
+end)
 
--- Main Tab 内容
-MainTab:CreateToggle({
-   Name = "Auto Clicker",
-   CurrentValue = false,
-   Flag = "ClickToggle",
-   Callback = function(Value)
-      getgenv().autoClick = Value
-      if Value then startClicking() end
-   end,
-})
+FarmToggle.Parent = MainFrame
+FarmToggle.Position = UDim2.new(0.1, 0, 0.45, 0)
+FarmToggle.Size = UDim2.new(0.8, 0, 0, 40)
+FarmToggle.Text = "Auto Farm: OFF"
+FarmToggle.MouseButton1Click:Connect(function()
+    getgenv().autoFarm = not getgenv().autoFarm
+    FarmToggle.Text = getgenv().autoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
+    FarmToggle.BackgroundColor3 = getgenv().autoFarm and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
+    if getgenv().autoFarm then doFarm() end
+end)
 
-MainTab:CreateSlider({
-   Name = "Click Speed",
-   Range = {0.01, 1},
-   Increment = 0.01,
-   Suffix = "s",
-   CurrentValue = 0.05,
-   Flag = "SpeedSlider",
-   Callback = function(Value) getgenv().clickSpeed = Value end,
-})
-
--- Farm Tab 内容
-local MobDropdown = FarmTab:CreateDropdown({
-   Name = "Select Monster (怪物选择)",
-   Options = {"None"}, -- 初始为空
-   CurrentOption = "None",
-   Callback = function(Option)
-      getgenv().selectedMob = Option
-   end,
-})
-
-FarmTab:CreateButton({
-   Name = "Refresh Monsters (刷新附近怪物)",
-   Callback = function()
-      local mobs = {}
-      -- 扫描附近的 Model 寻找带有血条的对象
-      for _, v in pairs(workspace:GetDescendants()) do
-          if v:IsA("Model") and v:FindFirstChild("Humanoid") and not game.Players:GetPlayerFromCharacter(v) then
-              if not table.find(mobs, v.Name) then
-                  table.insert(mobs, v.Name)
-              end
-          end
-      end
-      MobDropdown:Set(mobs) -- 更新下拉菜单
-      Rayfield:Notify({Title = "Updated", Content = "Monster list refreshed!", Duration = 2})
-   end,
-})
-
-FarmTab:CreateToggle({
-   Name = "Auto Teleport Farm (自动传送刷怪)",
-   CurrentValue = false,
-   Flag = "FarmToggle",
-   Callback = function(Value)
-      getgenv().autoFarm = Value
-      if Value then 
-          if getgenv().selectedMob == "None" then
-              Rayfield:Notify({Title = "Error", Content = "Please select a monster first!", Duration = 3})
-          else
-              startFarm() 
-          end
-      end
-   end,
-})
-
--- 系统设置
-MainTab:CreateSection("System")
-MainTab:CreateButton({
-   Name = "FORCE STOP",
-   Callback = function()
-      getgenv().autoClick = false
-      getgenv().autoFarm = false
-      task.wait(0.1)
-      Rayfield:Destroy()
-   end,
-})
+StatusLabel.Parent = MainFrame
+StatusLabel.Position = UDim2.new(0, 0, 0.8, 0)
+StatusLabel.Size = UDim2.new(1, 0, 0, 30)
+StatusLabel.Text = "Status: Native UI Ready"
+StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusLabel.BackgroundTransparency = 1
