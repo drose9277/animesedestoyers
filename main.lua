@@ -1,91 +1,93 @@
--- [[ 1. 加载 Orion UI 库 ]]
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+-- [[ 1. 基础设置 ]]
 local VIM = game:GetService("VirtualInputManager")
 local UIS = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
 
--- [[ 2. 初始化变量 ]]
 getgenv().AutoClick = false
 getgenv().ClickSpeed = 0.1
 
--- [[ 3. 创建窗口 ]]
-local Window = OrionLib:MakeWindow({
-    Name = "🔥 Kyusuke Hub", 
-    HidePremium = true, 
-    SaveConfig = false, 
-    IntroText = "Kyusuke 系统启动中..."
-})
+-- 清理旧 UI (防止多次运行叠加)
+if CoreGui:FindFirstChild("KyusukeMobile") then
+    CoreGui.KyusukeMobile:Destroy()
+end
 
--- [[ 4. 手机专用紧急停止（防止 UI 卡死） ]]
-local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-local StopButton = Instance.new("TextButton", ScreenGui)
-StopButton.Size = UDim2.new(0, 100, 0, 45)
-StopButton.Position = UDim2.new(0.5, -50, 0, 10)
-StopButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-StopButton.Text = "🛑 停止"
-StopButton.TextColor3 = Color3.new(1, 1, 1)
-StopButton.Visible = false
-StopButton.ZIndex = 999
+-- [[ 2. 创建极简原生 UI (避开第三方库的 Bug) ]]
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "KyusukeMobile"
 
-StopButton.MouseButton1Click:Connect(function()
-    getgenv().AutoClick = false
-    StopButton.Visible = false
-    OrionLib:MakeNotification({
-        Name = "已停止",
-        Content = "连点器已关闭",
-        Time = 2
-    })
+-- 主面板
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 200, 0, 150)
+MainFrame.Position = UDim2.new(0.5, -100, 0.4, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Active = true
+MainFrame.Draggable = true -- 这个版本允许你手动拖动到角落
+
+-- 标题
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "🔥 Kyusuke Hub"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+
+-- 开关按钮
+local ToggleBtn = Instance.new("TextButton", MainFrame)
+ToggleBtn.Size = UDim2.new(0.8, 0, 0, 40)
+ToggleBtn.Position = UDim2.new(0.1, 0, 0.3, 0)
+ToggleBtn.Text = "开启连点 (OFF)"
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+
+-- 速度调节按钮 (简单点，点一次加/减)
+local SpeedBtn = Instance.new("TextButton", MainFrame)
+SpeedBtn.Size = UDim2.new(0.8, 0, 0, 30)
+SpeedBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
+SpeedBtn.Text = "当前延迟: 0.1s"
+SpeedBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+SpeedBtn.TextColor3 = Color3.new(1, 1, 1)
+
+-- [[ 3. 核心逻辑修复 ]]
+
+-- 切换开关
+ToggleBtn.MouseButton1Click:Connect(function()
+    getgenv().AutoClick = not getgenv().AutoClick
+    if getgenv().AutoClick then
+        ToggleBtn.Text = "运行中 (按 X 或再点我停止)"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        -- 💡 关键：开启后轻微透明，防止干扰
+        MainFrame.BackgroundTransparency = 0.5
+    else
+        ToggleBtn.Text = "开启连点 (OFF)"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        MainFrame.BackgroundTransparency = 0
+    end
 end)
 
--- [[ 5. 主菜单 ]]
-local Tab = Window:MakeTab({
-    Name = "自动功能",
-    Icon = "rbxassetid://4483362458",
-    PremiumOnly = false
-})
+-- 调节速度
+SpeedBtn.MouseButton1Click:Connect(function()
+    if getgenv().ClickSpeed <= 0.05 then
+        getgenv().ClickSpeed = 0.5
+    else
+        getgenv().ClickSpeed = getgenv().ClickSpeed - 0.05
+    end
+    SpeedBtn.Text = "当前延迟: " .. string.format("%.2f", getgenv().ClickSpeed) .. "s"
+end)
 
-Tab:AddToggle({
-    Name = "开启自动点击",
-    Default = false,
-    Callback = function(Value)
-        getgenv().AutoClick = Value
-        StopButton.Visible = Value -- 开启时显示红色按钮
-    end    
-})
-
-Tab:AddSlider({
-    Name = "点击延迟 (秒)",
-    Min = 0.01,
-    Max = 1,
-    Default = 0.1,
-    Color = Color3.fromRGB(255,255,255),
-    Increment = 0.01,
-    ValueName = "sec",
-    Callback = function(Value)
-        getgenv().ClickSpeed = Value
-    end    
-})
-
--- [[ 6. 核心逻辑：强制分离点击点 ]]
+-- 连点循环
 task.spawn(function()
     while true do
         if getgenv().AutoClick then
-            -- 坐标设为 -5000, -5000。
-            -- 如果 UI 还会动，尝试改为屏幕中心 (500, 500) 看看是否有差异
-            VIM:SendMouseButtonEvent(-5000, -5000, 0, true, game, 0)
-            VIM:SendMouseButtonEvent(-5000, -5000, 0, false, game, 0)
+            -- 采用“绝对安全坐标”：点屏幕最右下角边缘
+            -- 这样即使它想拉动 UI，也因为在边缘拉不动
+            VIM:SendMouseButtonEvent(10, 10, 0, true, game, 0)
+            VIM:SendMouseButtonEvent(10, 10, 0, false, game, 0)
             task.wait(getgenv().ClickSpeed)
         else
-            task.wait(0.5)
+            task.wait(0.3)
         end
     end
 end)
 
--- [[ 7. PC 快捷键 ]]
+-- PC 快捷键
 UIS.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.X then
-        getgenv().AutoClick = false
-        StopButton.Visible = false
-    end
-end)
-
-OrionLib:Init()
