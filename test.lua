@@ -1,39 +1,32 @@
 --[[
-    Script: Kyusuke Hub (v3.8 Final Stability)
-    Fixes: "index nil with PlayerGui" Error
-    Features: Icon Toggle, AutoClick, Anti-AFK, Xeno Support
+    Script: Kyusuke Hub (v3.9 Stable + Keybind)
+    Fixes: Restored 'R' Keybind to toggle AutoClick
 ]]
 
--- 确保 Rayfield 加载
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- [ 1. 核心等待逻辑：修复报错的关键 ]
+-- [ 1. 核心等待逻辑 ]
 local Players = game:GetService("Players")
--- 循环等待直到 LocalPlayer 存在
 while not Players.LocalPlayer do task.wait(0.1) end
 local LP = Players.LocalPlayer
--- 等待 PlayerGui 加载
 local PlayerGui = LP:WaitForChild("PlayerGui", 10)
 
 -- [ 2. 全局变量 ]
 getgenv().AutoClick = false
 getgenv().ClickDelay = 0.1
-getgenv().KillAura = false
-getgenv().AuraRadius = 25
 getgenv().AntiAFKEnabled = false
-getgenv().WalkSpeedValue = 16 
 
 local VIM = game:GetService("VirtualInputManager")
 
 -- [ 3. 窗口创建 ]
 local Window = Rayfield:CreateWindow({
-    Name = "🔥 Kyusuke Hub v3.8",
-    LoadingTitle = "Xeno Stable Version",
-    LoadingSubtitle = "Fixing PlayerGui Errors...",
-    ConfigurationSaving = { Enabled = true, FolderName = "Kyusuke_Fix" }
+    Name = "🔥 Kyusuke Hub v3.9",
+    LoadingTitle = "Keybind Restored",
+    LoadingSubtitle = "Press 'R' to Toggle AC",
+    ConfigurationSaving = { Enabled = true, FolderName = "Kyusuke_Xeno" }
 })
 
--- [ 4. 核心功能（增加安全检查） ]
+-- [ 4. 核心循环 ]
 task.spawn(function()
     while true do
         if getgenv().AutoClick then
@@ -46,73 +39,56 @@ task.spawn(function()
     end
 end)
 
--- [ 5. 带图标的悬浮球（修复 Parent 路径） ]
-local ScreenGui = Instance.new("ScreenGui")
-local MainToggle = Instance.new("ImageButton")
-local UICorner = Instance.new("UICorner")
-local UIStroke = Instance.new("UIStroke")
-
--- 修复逻辑：优先尝试 CoreGui，失败则用刚才等待到的 PlayerGui
-local success, err = pcall(function()
-    ScreenGui.Parent = game:GetService("CoreGui")
-end)
-if not success then
-    ScreenGui.Parent = PlayerGui
-end
-
-ScreenGui.Name = "KyusukeIcon"
-ScreenGui.ResetOnSpawn = false
-
-MainToggle.Name = "MainToggle"
-MainToggle.Parent = ScreenGui
-MainToggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainToggle.BackgroundTransparency = 0.2
-MainToggle.Position = UDim2.new(0.05, 0, 0.15, 0)
-MainToggle.Size = UDim2.new(0, 50, 0, 50)
-MainToggle.Image = "rbxassetid://6031104609" -- 科技感图标
-MainToggle.Draggable = true 
-
-UICorner.CornerRadius = UDim.new(0, 15)
-UICorner.Parent = MainToggle
-
-UIStroke.Thickness = 2.5
-UIStroke.Color = Color3.fromRGB(255, 170, 0)
-UIStroke.Parent = MainToggle
-
-MainToggle.MouseButton1Click:Connect(function()
-    local target = game:GetService("CoreGui"):FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield")
-    if target then
-        target.Enabled = not target.Enabled
-    end
-end)
-
--- [ 6. UI 内容 ]
+-- [ 5. UI 标签页与 R 键绑定 ]
 local CombatTab = Window:CreateTab("Combat", 4483362458)
+
 local ClickToggle = CombatTab:CreateToggle({
     Name = "Auto Clicker",
     CurrentValue = false,
-    Flag = "T1",
+    Flag = "AutoClickFlag",
     Callback = function(Value) getgenv().AutoClick = Value end,
 })
 
-CombatTab:CreateSlider({
-    Name = "Click Speed",
-    Range = {0.05, 1},
-    Increment = 0.05,
-    CurrentValue = 0.1,
-    Callback = function(Value) getgenv().ClickDelay = Value end,
+-- 重新加入 R 键绑定
+CombatTab:CreateKeybind({
+    Name = "Clicker Hotkey (R)",
+    CurrentKeybind = "R",
+    HoldToInteract = false,
+    Callback = function(Keybind)
+        getgenv().AutoClick = not getgenv().AutoClick
+        ClickToggle:Set(getgenv().AutoClick) -- 同步 UI 上的开关状态
+        
+        -- 可选：通知反馈
+        Rayfield:Notify({
+            Title = "AutoClick Status",
+            Content = getgenv().AutoClick and "已开启 (ON)" or "已关闭 (OFF)",
+            Duration = 2
+        })
+    end,
 })
 
-local UtilTab = Window:CreateTab("Utility", 4483362458)
-UtilTab:CreateToggle({
-    Name = "Anti-AFK",
-    CurrentValue = false,
-    Flag = "T3",
-    Callback = function(Value) getgenv().AntiAFKEnabled = Value end,
-})
+-- [ 6. 图标悬浮球 (保持不变) ]
+local ScreenGui = Instance.new("ScreenGui")
+local MainToggle = Instance.new("ImageButton")
+local success, err = pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
+if not success then ScreenGui.Parent = PlayerGui end
+
+ScreenGui.Name = "KyusukeIcon"
+MainToggle.Parent = ScreenGui
+MainToggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainToggle.Position = UDim2.new(0.05, 0, 0.15, 0)
+MainToggle.Size = UDim2.new(0, 50, 0, 50)
+MainToggle.Image = "rbxassetid://6031104609"
+MainToggle.Draggable = true
+Instance.new("UICorner", MainToggle).CornerRadius = UDim.new(0, 15)
+
+MainToggle.MouseButton1Click:Connect(function()
+    local target = game:GetService("CoreGui"):FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield")
+    if target then target.Enabled = not target.Enabled end
+end)
 
 Rayfield:Notify({
-    Title = "Kyusuke Hub",
-    Content = "加载完成！点击橙色图标开关菜单。",
+    Title = "系统就绪",
+    Content = "R 键和悬浮球均已生效！",
     Duration = 5
 })
