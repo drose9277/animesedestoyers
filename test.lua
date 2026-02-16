@@ -1,6 +1,6 @@
 --[[
-    Script: Kyusuke Hub (v3.9 Stable + Keybind)
-    Fixes: Restored 'R' Keybind to toggle AutoClick
+    Script: Kyusuke Hub (v4.0 Mobile Full-Clear)
+    Fix: Fully hides all Rayfield UI elements on Mobile
 ]]
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -20,9 +20,9 @@ local VIM = game:GetService("VirtualInputManager")
 
 -- [ 3. 窗口创建 ]
 local Window = Rayfield:CreateWindow({
-    Name = "🔥 Kyusuke Hub v3.9",
-    LoadingTitle = "Keybind Restored",
-    LoadingSubtitle = "Press 'R' to Toggle AC",
+    Name = "🔥 Kyusuke Hub v4.0",
+    LoadingTitle = "Mobile Stability Patch",
+    LoadingSubtitle = "Icon Toggle Fixed",
     ConfigurationSaving = { Enabled = true, FolderName = "Kyusuke_Xeno" }
 })
 
@@ -39,56 +39,35 @@ task.spawn(function()
     end
 end)
 
--- [ 5. UI 标签页与 R 键绑定 ]
+-- [ 5. UI 内容与 R 键 ]
 local CombatTab = Window:CreateTab("Combat", 4483362458)
-
 local ClickToggle = CombatTab:CreateToggle({
     Name = "Auto Clicker",
     CurrentValue = false,
-    Flag = "AutoClickFlag",
+    Flag = "AC_Flag",
     Callback = function(Value) getgenv().AutoClick = Value end,
 })
 
--- 重新加入 R 键绑定
 CombatTab:CreateKeybind({
-    Name = "Clicker Hotkey (R)",
+    Name = "Hotkey (R)",
     CurrentKeybind = "R",
     HoldToInteract = false,
-    Callback = function(Keybind)
+    Callback = function()
         getgenv().AutoClick = not getgenv().AutoClick
-        ClickToggle:Set(getgenv().AutoClick) -- 同步 UI 上的开关状态
-        
-        -- 可选：通知反馈
-        Rayfield:Notify({
-            Title = "AutoClick Status",
-            Content = getgenv().AutoClick and "已开启 (ON)" or "已关闭 (OFF)",
-            Duration = 2
-        })
+        ClickToggle:Set(getgenv().AutoClick)
     end,
 })
 
--- [ 6. 图标悬浮球 (保持不变) ]
+-- [ 6. 手机专用：彻底隐藏切换器 ]
 local ScreenGui = Instance.new("ScreenGui")
 local MainToggle = Instance.new("ImageButton")
 local success, err = pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
 if not success then ScreenGui.Parent = PlayerGui end
 
-ScreenGui.Name = "KyusukeIcon"
+ScreenGui.Name = "Kyusuke_Toggle_System"
 MainToggle.Parent = ScreenGui
 MainToggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainToggle.Position = UDim2.new(0.05, 0, 0.15, 0)
+MainToggle.BackgroundTransparency = 0.3
+MainToggle.Position = UDim2.new(0, 10, 0.5, -25) -- 放在左边中间
 MainToggle.Size = UDim2.new(0, 50, 0, 50)
-MainToggle.Image = "rbxassetid://6031104609"
-MainToggle.Draggable = true
-Instance.new("UICorner", MainToggle).CornerRadius = UDim.new(0, 15)
-
-MainToggle.MouseButton1Click:Connect(function()
-    local target = game:GetService("CoreGui"):FindFirstChild("Rayfield") or PlayerGui:FindFirstChild("Rayfield")
-    if target then target.Enabled = not target.Enabled end
-end)
-
-Rayfield:Notify({
-    Title = "系统就绪",
-    Content = "R 键和悬浮球均已生效！",
-    Duration = 5
-})
+MainToggle.Image = "rbxassetid://6031104
